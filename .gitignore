@@ -1,0 +1,13 @@
+# Python bytecode / caches
+__pycache__/
+*.pyc
+
+# Dropbox sync artifacts
+*conflicted copy*
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Local editor / Claude settings (not part of the shared source)
+.claude/
