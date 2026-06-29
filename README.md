@@ -1,10 +1,10 @@
 # OUPI Robot Sumo — Zumo 2040 Kit
 
-Everything a second laptop needs to program a **Pololu Zumo 2040** robot for the
-OUPI robot-sumo demo, exactly the way the main laptop does it.
+Everything a laptop needs to program a **Pololu Zumo 2040** robot for the OUPI
+robot-sumo demo.
 
-This folder lives in Dropbox, so it auto-syncs to any laptop signed into the same
-Dropbox (or shared via folder link).
+This kit is the public GitHub repo at https://github.com/jhassell/oupi-zumo-sumo.
+Clone it (or download the ZIP) onto any laptop to set that machine up.
 
 ---
 
@@ -113,9 +113,11 @@ may need reformatting/reflashing.
 
 ---
 
-## Keeping the two laptops in sync
+## Using one or more laptops
 
-This kit is in Dropbox, so edits to `sumo2_BASELINE.py` here propagate to both
-laptops automatically. If you'd rather have version history / rollback, this
-folder can also be turned into a git repo and pushed to GitHub — ask and it can
-be set up.
+The kit is the GitHub repo, so each laptop just clones its own copy with
+`git clone https://github.com/jhassell/oupi-zumo-sumo`. The repo is the source of
+truth: pull the latest before an event with `git pull`, and commit and push any
+baseline changes you want other machines to pick up. Flashing a robot is always a
+local action over USB, so neither Git nor Dropbox pushes code to a robot (see
+Programming a robot).

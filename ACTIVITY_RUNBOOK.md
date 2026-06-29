@@ -45,24 +45,27 @@ code by hand — they talk to Claude Code, which applies the changes.
   tape**. The robot detects the edge with its downward line sensors; calibration
   learns the difference between the wood surface and the off-board drop-off.
 
-## 4. Two-laptop setup (Dropbox)
+## 4. Laptop setup (GitHub)
 
-Everything lives in a **Dropbox-synced folder** so two laptops (and two Claude
-Code instances) share the same files automatically.
+The kit is the public GitHub repo, so each laptop just clones its own copy:
 
-- This laptop's path: `/home/john/Dropbox/Teaching/zumo_kit/`
-- Companion laptop (any user): `~/Dropbox/Teaching/zumo_kit/`
+```bash
+git clone https://github.com/jhassell/oupi-zumo-sumo
+```
 
-Both laptops must be signed into the **same Dropbox** (or the folder shared to
-them). **Start Claude Code from inside that folder** so it picks up the project
-instructions in `CLAUDE.md`. If both laptops edit the same file at once, Dropbox
-makes a `*conflicted copy*` file — reconcile before flashing. There is no git
-history in the Dropbox copy (use the GitHub repo for that).
+- The clone creates an `oupi-zumo-sumo/` folder; that folder **is** the kit (the
+  repo root, not a `Teaching/zumo_kit` subfolder).
+- **Start Claude Code from inside that folder** so it picks up the project
+  instructions in `CLAUDE.md`.
+- The repo is the source of truth. Pull the latest before an event with
+  `git pull`; commit and push baseline changes you want the other machines to
+  get. Flashing a robot is always a local action over USB, so neither Git nor
+  Dropbox pushes code to a robot.
 
-## 5. Files & directory layout (all under `zumo_kit/`)
+## 5. Files & directory layout (all under `oupi-zumo-sumo/`)
 
 ```
-zumo_kit/
+oupi-zumo-sumo/
 ├── CLAUDE.md               # project instructions Claude auto-reads (the workflow rules)
 ├── README.md               # human setup guide for the kit
 ├── ACTIVITY_RUNBOOK.md     # THIS file
@@ -130,7 +133,7 @@ zumo_kit/
 The full protocol is also encoded as a comment block (`BUILD SELECTION PROTOCOL`)
 at the top of `sumo2_BASELINE.py`, and the workflow rules are in `CLAUDE.md`.
 
-## 8. Key commands (run from inside `zumo_kit/`)
+## 8. Key commands (run from inside the cloned `oupi-zumo-sumo/` folder)
 
 ```bash
 # which robots are connected and their letters
@@ -170,9 +173,9 @@ USB serial, never by the mount name or drive letter**).
   failing, that flash may need reformatting or the unit retired.
 - **Eject blocked ("target is busy"):** the file manager (nautilus) is holding the
   drive — close/eject it there; don't kill the file manager.
-- **Two laptops:** don't edit `sumo2_BASELINE.py` on both at once (Dropbox
-  conflicted copy). Edits sync automatically but the robot only updates when
-  flashed — Dropbox does NOT push code to the robot.
+- **Multiple laptops:** each laptop has its own clone, so coordinate baseline
+  edits through Git (commit and push, then `git pull` on the others). The robot
+  only updates when flashed; neither Git nor Dropbox pushes code to the robot.
 
 ## 10. Example builds from the first run (for reference)
 
@@ -198,7 +201,7 @@ These were all written into `custom/sumo2.py` per-build and wiped on the next
 ## 11. Resuming in a few weeks — checklist
 
 1. Plug a robot into the laptop; confirm the `MicroPython` drive mounts.
-2. `cd ~/Dropbox/Teaching/zumo_kit` and start **Claude Code** there.
+2. `cd` into the cloned `oupi-zumo-sumo` folder and start **Claude Code** there.
 3. Ask Claude *"what does 'restart' do here?"* to confirm it loaded `CLAUDE.md`.
 4. `python3 scripts/identify_bots.py` to see which bot is which.
 5. (First match on a new arena) calibrate each robot: reset → **C** → WOOD sample
