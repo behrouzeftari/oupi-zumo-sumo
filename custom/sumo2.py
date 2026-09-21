@@ -7,9 +7,17 @@
 #   EDGE MARKER  = the physical edge of the board (a drop-off, no tape)
 #
 # Buttons:
-#   A = start / stop match
-#   B = change difficulty when stopped
-#   C = recalibrate edge when stopped
+#   A = start / stop match (always -- stops a running match from any screen)
+#   When stopped, A/B/C drive a small on-robot menu so a student can pick a
+#   fighting style without touching the laptop:
+#     MAIN:       A Start        B Settings     C Recalibrate
+#     SETTINGS:   A Difficulty   B Strategy     C Back
+#     DIFFICULTY: A Rookie       B Student      C Professor
+#     STRATEGY:   A Aggressive   B Balanced     C Defensive
+#   Difficulty/Strategy picks apply immediately and stay in effect for the
+#   rest of the session (until the next reflash or power-cycle). TEAM_NAME,
+#   TEAM_COLOR and the personal tweak are still set by editing the TEAM BOT
+#   CONFIG block below (laptop/Claude workflow, unchanged).
 #
 # Startup calibration (board-edge detection):
 #   1. One sample on the bare wood surface (robot sitting flat).
@@ -292,6 +300,69 @@ TEAM_RGB = _COLORS.get(TEAM_COLOR.upper(), RGB_WHITE)
 
 
 # ---------------------------------------------------------------------------
+# On-robot Strategy presets (student-facing, no laptop needed)
+# ---------------------------------------------------------------------------
+#
+# Each Strategy bundles the three fight-personality axes (AGGRESSION, AGILITY,
+# EDGE_NERVE) into one button press, reusing the exact same lookup tables as
+# the TEAM BOT CONFIG block above -- no new engine parameters. BALANCED
+# reproduces this file's default TEAM BOT CONFIG values, so "Balanced" is
+# always the current baseline/default behavior.
+
+STRATEGY_PRESETS = {
+    "AGGRESSIVE": {"AGGRESSION": "RECKLESS", "AGILITY": "TWITCHY",  "EDGE_NERVE": "DAREDEVIL"},
+    "BALANCED":   {"AGGRESSION": "BALANCED", "AGILITY": "NIMBLE",   "EDGE_NERVE": "NORMAL"},
+    "DEFENSIVE":  {"AGGRESSION": "CAUTIOUS", "AGILITY": "SLUGGISH", "EDGE_NERVE": "CAREFUL"},
+}
+
+
+def _infer_strategy_choice():
+    # Label only -- if the TEAM BOT CONFIG block was hand-customized to a
+    # combo outside the three presets, this just falls back to "BALANCED"
+    # for display without touching the actual (custom) engine parameters.
+    for preset_name, preset in STRATEGY_PRESETS.items():
+        if (AGGRESSION.upper() == preset["AGGRESSION"] and
+                AGILITY.upper() == preset["AGILITY"] and
+                EDGE_NERVE.upper() == preset["EDGE_NERVE"]):
+            return preset_name
+    return "BALANCED"
+
+
+def apply_strategy_preset(name):
+    # Re-derives AGGRO_PCT / FRONT_ATTACK_THRESHOLD / STEER_GAIN / TURN_PCT /
+    # EDGE_CONFIRM_COUNT with the same _AGGRO / _AGILITY / _NERVE tables used
+    # at startup, so Strategy selection is just re-running the existing
+    # TEAM BOT CONFIG math with a different named combo.
+    global AGGRESSION, AGILITY, EDGE_NERVE
+    global AGGRO_PCT, FRONT_ATTACK_THRESHOLD, STEER_GAIN, TURN_PCT, EDGE_CONFIRM_COUNT
+    global strategy_choice
+
+    if running:
+        return
+
+    preset = STRATEGY_PRESETS.get(name, STRATEGY_PRESETS["BALANCED"])
+    AGGRESSION = preset["AGGRESSION"]
+    AGILITY = preset["AGILITY"]
+    EDGE_NERVE = preset["EDGE_NERVE"]
+
+    AGGRO_PCT, FRONT_ATTACK_THRESHOLD = _AGGRO.get(AGGRESSION, (100, 2))
+    STEER_GAIN, TURN_PCT = _AGILITY.get(AGILITY, (650, 100))
+    EDGE_CONFIRM_COUNT = _NERVE.get(EDGE_NERVE, 3)
+
+    strategy_choice = name
+
+
+def apply_difficulty_choice(name):
+    global difficulty_index, CLASS
+
+    if running:
+        return
+
+    difficulty_index = _CLASS_INDEX.get(name.upper(), 1)
+    CLASS = name
+
+
+# ---------------------------------------------------------------------------
 # State constants
 # ---------------------------------------------------------------------------
 
@@ -303,6 +374,12 @@ STATE_ESCAPE = "ESCAPE"
 STATE_COMBAT_MANEUVER = "COMBAT"
 STATE_STOPPED = "STOPPED"
 
+# On-robot menu screens (only shown/used while stopped).
+UI_MAIN = "MAIN"
+UI_SETTINGS = "SETTINGS"
+UI_DIFFICULTY = "DIFFICULTY"
+UI_STRATEGY = "STRATEGY"
+
 
 # ---------------------------------------------------------------------------
 # Runtime state
@@ -310,6 +387,10 @@ STATE_STOPPED = "STOPPED"
 
 running = False
 state = STATE_READY
+
+# On-robot menu state (student-facing Difficulty/Strategy picker).
+ui_screen = UI_MAIN
+strategy_choice = _infer_strategy_choice()
 
 last_seen_dir = 1       # -1 = left, 1 = right
 search_dir = 1
@@ -700,9 +781,21 @@ def update_display(force=False):
                 current_line[4]
             )
             display.text("L:" + line_text[:15], 0, 46)
+    elif ui_screen == UI_SETTINGS:
+        display.text("A diff:{}".format(name[:4]), 0, 16)
+        display.text("B strat:{}".format(strategy_choice[:4]), 0, 32)
+        display.text("C back", 0, 48)
+    elif ui_screen == UI_DIFFICULTY:
+        display.text("A rookie", 0, 16)
+        display.text("B student", 0, 32)
+        display.text("C professor", 0, 48)
+    elif ui_screen == UI_STRATEGY:
+        display.text("A aggressive", 0, 16)
+        display.text("B balanced", 0, 32)
+        display.text("C defensive", 0, 48)
     else:
         display.text("A start", 0, 16)
-        display.text("B difficulty", 0, 32)
+        display.text("B settings", 0, 32)
         display.text("C recalib", 0, 48)
 
     display.show()
@@ -1491,12 +1584,14 @@ def toggle_running():
     global full_power
     global search_phase_start_ms
     global search_advancing
+    global ui_screen
 
     if running:
         running = False
         state = STATE_STOPPED
         attack_start_ms = 0
         stuck_count = 0
+        ui_screen = UI_MAIN
 
         stop_motors()
         chirp_stop()
@@ -1531,26 +1626,51 @@ def toggle_running():
     clear_button_events(300)
 
 
-def cycle_difficulty():
-    global difficulty_index
-
-    if running:
-        return
-
-    difficulty_index = (difficulty_index + 1) % len(DIFFICULTIES)
-
-    name, search_speed, track_speed, attack_speed = get_difficulty()
-
-    display.fill(0)
-    display.text("Difficulty", 0, 0)
-    display.text(name, 0, 20)
-    display.text("A start", 0, 48)
-    display.show()
-
+def enter_screen(screen):
+    global ui_screen
+    ui_screen = screen
     play_tone("t200 l16 o5 c")
+    update_display(True)
 
-    time.sleep_ms(600)
-    clear_button_events(300)
+
+def handle_button_a_menu():
+    if ui_screen == UI_MAIN:
+        toggle_running()
+    elif ui_screen == UI_SETTINGS:
+        enter_screen(UI_DIFFICULTY)
+    elif ui_screen == UI_DIFFICULTY:
+        apply_difficulty_choice("ROOKIE")
+        enter_screen(UI_SETTINGS)
+    elif ui_screen == UI_STRATEGY:
+        apply_strategy_preset("AGGRESSIVE")
+        enter_screen(UI_SETTINGS)
+
+
+def handle_button_b_menu():
+    if ui_screen == UI_MAIN:
+        enter_screen(UI_SETTINGS)
+    elif ui_screen == UI_SETTINGS:
+        enter_screen(UI_STRATEGY)
+    elif ui_screen == UI_DIFFICULTY:
+        apply_difficulty_choice("STUDENT")
+        enter_screen(UI_SETTINGS)
+    elif ui_screen == UI_STRATEGY:
+        apply_strategy_preset("BALANCED")
+        enter_screen(UI_SETTINGS)
+
+
+def handle_button_c_menu():
+    if ui_screen == UI_MAIN:
+        calibrate_edge_threshold()
+        clear_button_events(500)
+    elif ui_screen == UI_SETTINGS:
+        enter_screen(UI_MAIN)
+    elif ui_screen == UI_DIFFICULTY:
+        apply_difficulty_choice("PROFESSOR")
+        enter_screen(UI_SETTINGS)
+    elif ui_screen == UI_STRATEGY:
+        apply_strategy_preset("DEFENSIVE")
+        enter_screen(UI_SETTINGS)
 
 
 # ---------------------------------------------------------------------------
@@ -1598,29 +1718,32 @@ def main():
 
         any_edge, left_edge, center_edge, right_edge = edge_status(line)
 
-        # Button A: start / stop.
+        # Button A: stop a running match from anywhere; otherwise menu-driven
+        # (Start at the main menu, a selection at a deeper screen).
         if button_a.check() == True:
             while button_a.check() != False:
                 time.sleep_ms(20)
 
-            toggle_running()
+            if running:
+                toggle_running()
+            else:
+                handle_button_a_menu()
 
-        # Button B: difficulty, only when stopped.
+        # Button B: menu-driven, only when stopped.
         if button_b.check() == True:
             while button_b.check() != False:
                 time.sleep_ms(20)
 
             if not running:
-                cycle_difficulty()
+                handle_button_b_menu()
 
-        # Button C: recalibrate, only when stopped.
+        # Button C: menu-driven, only when stopped.
         if button_c.check() == True:
             while button_c.check() != False:
                 time.sleep_ms(20)
 
             if not running:
-                calibrate_edge_threshold()
-                clear_button_events(500)
+                handle_button_c_menu()
 
         if not running:
             stop_motors()
