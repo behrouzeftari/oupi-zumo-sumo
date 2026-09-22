@@ -7,9 +7,19 @@
 #   EDGE MARKER  = the physical edge of the board (a drop-off, no tape)
 #
 # Buttons:
-#   A = start / stop match
-#   B = change difficulty when stopped
-#   C = recalibrate edge when stopped
+#   A = start / stop match (always -- stops a running match from any screen)
+#   Students interact entirely through the robot's buttons and OLED -- no
+#   laptop needed. When stopped, A/B/C drive a small on-robot menu:
+#     MAIN:     A Start     B Settings   C Recalibrate
+#     SETTINGS: A Persona   B Color      C Back
+#     PERSONA:  A Bear      B Lion       C Wolf
+#     COLOR:    A Blue      B Red        C Green
+#   Persona picks the robot's fighting personality (search/track/attack
+#   parameters); Color is visual identity only. Both apply immediately and
+#   stay in effect for the rest of the session (until the next reflash or
+#   power-cycle), and can only be changed while stopped. See PERSONA_PRESETS
+#   below. TEAM_NAME and HOUSE_BOT are still set in the TEAM BOT CONFIG block
+#   below (faculty/laptop only, no student-facing editor).
 #
 # Startup calibration (board-edge detection):
 #   1. One sample on the bare wood surface (robot sitting flat).
@@ -292,6 +302,69 @@ TEAM_RGB = _COLORS.get(TEAM_COLOR.upper(), RGB_WHITE)
 
 
 # ---------------------------------------------------------------------------
+# On-robot Persona presets (student-facing, no laptop needed)
+# ---------------------------------------------------------------------------
+#
+# One combat engine, one preset table. Each Persona is just a named bundle of
+# the same engine parameters the TEAM BOT CONFIG block above already computes
+# (speed tier, attack power, attack-commit threshold, steering gain) -- no new
+# physics, no separate state machine per Persona. Selecting a Persona
+# overwrites these engine parameters directly; it deliberately does NOT touch
+# EDGE_CONFIRM_COUNT, which stays fixed from EDGE_NERVE above for every
+# Persona, for the whole session (edge safety is common, not personality).
+#
+#   speed_tier       -- index into DIFFICULTIES (base search/track/attack speed)
+#   turn_pct         -- search/track speed %, same slot as AGILITY's TURN_PCT
+#   aggro_pct        -- attack speed %, same slot as AGGRESSION's AGGRO_PCT
+#   front_threshold  -- front strength needed to commit to ATTACK (lower = sooner)
+#   steer_gain       -- steering aggressiveness while tracking/attacking
+#
+# All values stay within the range the five-axis system already exercises
+# (turn_pct 85-115, aggro_pct 85-120, front_threshold 1-3, steer_gain 400-950).
+
+PERSONA_PRESETS = {
+    # Slow, deliberate search; hits hardest once it commits ("slow, then hit hard").
+    "BEAR": {"speed_tier": 0, "turn_pct": 85,  "aggro_pct": 120, "front_threshold": 3, "steer_gain": 650},
+    # Active, mobile search; engages promptly ("move, find, attack").
+    "LION": {"speed_tier": 1, "turn_pct": 115, "aggro_pct": 100, "front_threshold": 2, "steer_gain": 800},
+    # Locks on hardest, commits fastest once tracking ("find, follow, hunt").
+    "WOLF": {"speed_tier": 1, "turn_pct": 100, "aggro_pct": 110, "front_threshold": 1, "steer_gain": 950},
+}
+
+
+def apply_persona(name):
+    global difficulty_index
+    global AGGRO_PCT, FRONT_ATTACK_THRESHOLD, STEER_GAIN, TURN_PCT
+    global current_persona
+
+    if running:
+        return
+
+    preset = PERSONA_PRESETS.get(name, PERSONA_PRESETS["LION"])
+
+    difficulty_index = preset["speed_tier"]
+    TURN_PCT = preset["turn_pct"]
+    AGGRO_PCT = preset["aggro_pct"]
+    FRONT_ATTACK_THRESHOLD = preset["front_threshold"]
+    STEER_GAIN = preset["steer_gain"]
+
+    current_persona = name
+
+
+def apply_color(name):
+    # Visual identity only -- reuses the existing _COLORS/TEAM_RGB mechanism.
+    # No combat parameter is read or written here.
+    global TEAM_COLOR, TEAM_RGB, current_color
+
+    if running:
+        return
+
+    TEAM_COLOR = name
+    TEAM_RGB = _COLORS.get(name.upper(), RGB_WHITE)
+    current_color = name
+
+
+# ---------------------------------------------------------------------------
 # State constants
 # ---------------------------------------------------------------------------
 
@@ -303,6 +376,12 @@ STATE_ESCAPE = "ESCAPE"
 STATE_COMBAT_MANEUVER = "COMBAT"
 STATE_STOPPED = "STOPPED"
 
+# On-robot menu screens (only shown/used while stopped).
+UI_MAIN = "MAIN"
+UI_SETTINGS = "SETTINGS"
+UI_PERSONA = "PERSONA"
+UI_COLOR = "COLOR"
+
 
 # ---------------------------------------------------------------------------
 # Runtime state
@@ -310,6 +389,13 @@ STATE_STOPPED = "STOPPED"
 
 running = False
 state = STATE_READY
+
+# On-robot menu state (student-facing Persona/Color picker).
+ui_screen = UI_MAIN
+current_persona = "LION"
+current_color = "BLUE"
+apply_persona(current_persona)
+apply_color(current_color)
 
 last_seen_dir = 1       # -1 = left, 1 = right
 search_dir = 1
@@ -658,9 +744,14 @@ def update_display(force=False):
     name, search_speed, track_speed, attack_speed = get_difficulty()
 
     display.fill(0)
-    display.text(TEAM_NAME[:10], 0, 0)
-    display.text(BOT_ID, 72, 0)
-    display.text(name[:4], 96, 0)
+
+    if not running and ui_screen == UI_MAIN:
+        # MAIN screen leads with the student's actual choices.
+        display.text("{} {}".format(current_persona, current_color), 0, 0)
+    else:
+        display.text(TEAM_NAME[:10], 0, 0)
+        display.text(BOT_ID, 72, 0)
+        display.text(name[:4], 96, 0)
 
     if running:
         pct = intensity_pct()
@@ -700,10 +791,22 @@ def update_display(force=False):
                 current_line[4]
             )
             display.text("L:" + line_text[:15], 0, 46)
+    elif ui_screen == UI_SETTINGS:
+        display.text("A Persona", 0, 16)
+        display.text("B Color", 0, 32)
+        display.text("C Back", 0, 48)
+    elif ui_screen == UI_PERSONA:
+        display.text("A Bear", 0, 16)
+        display.text("B Lion", 0, 32)
+        display.text("C Wolf", 0, 48)
+    elif ui_screen == UI_COLOR:
+        display.text("A Blue", 0, 16)
+        display.text("B Red", 0, 32)
+        display.text("C Green", 0, 48)
     else:
-        display.text("A start", 0, 16)
-        display.text("B difficulty", 0, 32)
-        display.text("C recalib", 0, 48)
+        display.text("A Start", 0, 16)
+        display.text("B Settings", 0, 32)
+        display.text("C Recalib", 0, 48)
 
     display.show()
 
@@ -1491,12 +1594,14 @@ def toggle_running():
     global full_power
     global search_phase_start_ms
     global search_advancing
+    global ui_screen
 
     if running:
         running = False
         state = STATE_STOPPED
         attack_start_ms = 0
         stuck_count = 0
+        ui_screen = UI_MAIN
 
         stop_motors()
         chirp_stop()
@@ -1531,26 +1636,51 @@ def toggle_running():
     clear_button_events(300)
 
 
-def cycle_difficulty():
-    global difficulty_index
-
-    if running:
-        return
-
-    difficulty_index = (difficulty_index + 1) % len(DIFFICULTIES)
-
-    name, search_speed, track_speed, attack_speed = get_difficulty()
-
-    display.fill(0)
-    display.text("Difficulty", 0, 0)
-    display.text(name, 0, 20)
-    display.text("A start", 0, 48)
-    display.show()
-
+def enter_screen(screen):
+    global ui_screen
+    ui_screen = screen
     play_tone("t200 l16 o5 c")
+    update_display(True)
 
-    time.sleep_ms(600)
-    clear_button_events(300)
+
+def handle_button_a_menu():
+    if ui_screen == UI_MAIN:
+        toggle_running()
+    elif ui_screen == UI_SETTINGS:
+        enter_screen(UI_PERSONA)
+    elif ui_screen == UI_PERSONA:
+        apply_persona("BEAR")
+        enter_screen(UI_SETTINGS)
+    elif ui_screen == UI_COLOR:
+        apply_color("BLUE")
+        enter_screen(UI_SETTINGS)
+
+
+def handle_button_b_menu():
+    if ui_screen == UI_MAIN:
+        enter_screen(UI_SETTINGS)
+    elif ui_screen == UI_SETTINGS:
+        enter_screen(UI_COLOR)
+    elif ui_screen == UI_PERSONA:
+        apply_persona("LION")
+        enter_screen(UI_SETTINGS)
+    elif ui_screen == UI_COLOR:
+        apply_color("RED")
+        enter_screen(UI_SETTINGS)
+
+
+def handle_button_c_menu():
+    if ui_screen == UI_MAIN:
+        calibrate_edge_threshold()
+        clear_button_events(500)
+    elif ui_screen == UI_SETTINGS:
+        enter_screen(UI_MAIN)
+    elif ui_screen == UI_PERSONA:
+        apply_persona("WOLF")
+        enter_screen(UI_SETTINGS)
+    elif ui_screen == UI_COLOR:
+        apply_color("GREEN")
+        enter_screen(UI_SETTINGS)
 
 
 # ---------------------------------------------------------------------------
@@ -1598,29 +1728,32 @@ def main():
 
         any_edge, left_edge, center_edge, right_edge = edge_status(line)
 
-        # Button A: start / stop.
+        # Button A: stop a running match from anywhere; otherwise menu-driven
+        # (Start at the main menu, a selection at a deeper screen).
         if button_a.check() == True:
             while button_a.check() != False:
                 time.sleep_ms(20)
 
-            toggle_running()
+            if running:
+                toggle_running()
+            else:
+                handle_button_a_menu()
 
-        # Button B: difficulty, only when stopped.
+        # Button B: menu-driven, only when stopped.
         if button_b.check() == True:
             while button_b.check() != False:
                 time.sleep_ms(20)
 
             if not running:
-                cycle_difficulty()
+                handle_button_b_menu()
 
-        # Button C: recalibrate, only when stopped.
+        # Button C: menu-driven, only when stopped.
         if button_c.check() == True:
             while button_c.check() != False:
                 time.sleep_ms(20)
 
             if not running:
-                calibrate_edge_threshold()
-                clear_button_events(500)
+                handle_button_c_menu()
 
         if not running:
             stop_motors()
