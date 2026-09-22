@@ -8,16 +8,18 @@
 #
 # Buttons:
 #   A = start / stop match (always -- stops a running match from any screen)
-#   When stopped, A/B/C drive a small on-robot menu so a student can pick a
-#   fighting style without touching the laptop:
-#     MAIN:       A Start        B Settings     C Recalibrate
-#     SETTINGS:   A Difficulty   B Strategy     C Back
-#     DIFFICULTY: A Rookie       B Student      C Professor
-#     STRATEGY:   A Aggressive   B Balanced     C Defensive
-#   Difficulty/Strategy picks apply immediately and stay in effect for the
-#   rest of the session (until the next reflash or power-cycle). TEAM_NAME,
-#   TEAM_COLOR and the personal tweak are still set by editing the TEAM BOT
-#   CONFIG block below (laptop/Claude workflow, unchanged).
+#   Students interact entirely through the robot's buttons and OLED -- no
+#   laptop needed. When stopped, A/B/C drive a small on-robot menu:
+#     MAIN:     A Start     B Settings   C Recalibrate
+#     SETTINGS: A Persona   B Color      C Back
+#     PERSONA:  A Bear      B Lion       C Wolf
+#     COLOR:    A Blue      B Red        C Green
+#   Persona picks the robot's fighting personality (search/track/attack
+#   parameters); Color is visual identity only. Both apply immediately and
+#   stay in effect for the rest of the session (until the next reflash or
+#   power-cycle), and can only be changed while stopped. See PERSONA_PRESETS
+#   below. TEAM_NAME and HOUSE_BOT are still set in the TEAM BOT CONFIG block
+#   below (faculty/laptop only, no student-facing editor).
 #
 # Startup calibration (board-edge detection):
 #   1. One sample on the bare wood surface (robot sitting flat).
@@ -300,66 +302,66 @@ TEAM_RGB = _COLORS.get(TEAM_COLOR.upper(), RGB_WHITE)
 
 
 # ---------------------------------------------------------------------------
-# On-robot Strategy presets (student-facing, no laptop needed)
+# On-robot Persona presets (student-facing, no laptop needed)
 # ---------------------------------------------------------------------------
 #
-# Each Strategy bundles the three fight-personality axes (AGGRESSION, AGILITY,
-# EDGE_NERVE) into one button press, reusing the exact same lookup tables as
-# the TEAM BOT CONFIG block above -- no new engine parameters. BALANCED
-# reproduces this file's default TEAM BOT CONFIG values, so "Balanced" is
-# always the current baseline/default behavior.
+# One combat engine, one preset table. Each Persona is just a named bundle of
+# the same engine parameters the TEAM BOT CONFIG block above already computes
+# (speed tier, attack power, attack-commit threshold, steering gain) -- no new
+# physics, no separate state machine per Persona. Selecting a Persona
+# overwrites these engine parameters directly; it deliberately does NOT touch
+# EDGE_CONFIRM_COUNT, which stays fixed from EDGE_NERVE above for every
+# Persona, for the whole session (edge safety is common, not personality).
+#
+#   speed_tier       -- index into DIFFICULTIES (base search/track/attack speed)
+#   turn_pct         -- search/track speed %, same slot as AGILITY's TURN_PCT
+#   aggro_pct        -- attack speed %, same slot as AGGRESSION's AGGRO_PCT
+#   front_threshold  -- front strength needed to commit to ATTACK (lower = sooner)
+#   steer_gain       -- steering aggressiveness while tracking/attacking
+#
+# All values stay within the range the five-axis system already exercises
+# (turn_pct 85-115, aggro_pct 85-120, front_threshold 1-3, steer_gain 400-950).
 
-STRATEGY_PRESETS = {
-    "AGGRESSIVE": {"AGGRESSION": "RECKLESS", "AGILITY": "TWITCHY",  "EDGE_NERVE": "DAREDEVIL"},
-    "BALANCED":   {"AGGRESSION": "BALANCED", "AGILITY": "NIMBLE",   "EDGE_NERVE": "NORMAL"},
-    "DEFENSIVE":  {"AGGRESSION": "CAUTIOUS", "AGILITY": "SLUGGISH", "EDGE_NERVE": "CAREFUL"},
+PERSONA_PRESETS = {
+    # Slow, deliberate search; hits hardest once it commits ("slow, then hit hard").
+    "BEAR": {"speed_tier": 0, "turn_pct": 85,  "aggro_pct": 120, "front_threshold": 3, "steer_gain": 650},
+    # Active, mobile search; engages promptly ("move, find, attack").
+    "LION": {"speed_tier": 1, "turn_pct": 115, "aggro_pct": 100, "front_threshold": 2, "steer_gain": 800},
+    # Locks on hardest, commits fastest once tracking ("find, follow, hunt").
+    "WOLF": {"speed_tier": 1, "turn_pct": 100, "aggro_pct": 110, "front_threshold": 1, "steer_gain": 950},
 }
 
 
-def _infer_strategy_choice():
-    # Label only -- if the TEAM BOT CONFIG block was hand-customized to a
-    # combo outside the three presets, this just falls back to "BALANCED"
-    # for display without touching the actual (custom) engine parameters.
-    for preset_name, preset in STRATEGY_PRESETS.items():
-        if (AGGRESSION.upper() == preset["AGGRESSION"] and
-                AGILITY.upper() == preset["AGILITY"] and
-                EDGE_NERVE.upper() == preset["EDGE_NERVE"]):
-            return preset_name
-    return "BALANCED"
-
-
-def apply_strategy_preset(name):
-    # Re-derives AGGRO_PCT / FRONT_ATTACK_THRESHOLD / STEER_GAIN / TURN_PCT /
-    # EDGE_CONFIRM_COUNT with the same _AGGRO / _AGILITY / _NERVE tables used
-    # at startup, so Strategy selection is just re-running the existing
-    # TEAM BOT CONFIG math with a different named combo.
-    global AGGRESSION, AGILITY, EDGE_NERVE
-    global AGGRO_PCT, FRONT_ATTACK_THRESHOLD, STEER_GAIN, TURN_PCT, EDGE_CONFIRM_COUNT
-    global strategy_choice
+def apply_persona(name):
+    global difficulty_index
+    global AGGRO_PCT, FRONT_ATTACK_THRESHOLD, STEER_GAIN, TURN_PCT
+    global current_persona
 
     if running:
         return
 
-    preset = STRATEGY_PRESETS.get(name, STRATEGY_PRESETS["BALANCED"])
-    AGGRESSION = preset["AGGRESSION"]
-    AGILITY = preset["AGILITY"]
-    EDGE_NERVE = preset["EDGE_NERVE"]
+    preset = PERSONA_PRESETS.get(name, PERSONA_PRESETS["LION"])
 
-    AGGRO_PCT, FRONT_ATTACK_THRESHOLD = _AGGRO.get(AGGRESSION, (100, 2))
-    STEER_GAIN, TURN_PCT = _AGILITY.get(AGILITY, (650, 100))
-    EDGE_CONFIRM_COUNT = _NERVE.get(EDGE_NERVE, 3)
+    difficulty_index = preset["speed_tier"]
+    TURN_PCT = preset["turn_pct"]
+    AGGRO_PCT = preset["aggro_pct"]
+    FRONT_ATTACK_THRESHOLD = preset["front_threshold"]
+    STEER_GAIN = preset["steer_gain"]
 
-    strategy_choice = name
+    current_persona = name
 
 
-def apply_difficulty_choice(name):
-    global difficulty_index, CLASS
+def apply_color(name):
+    # Visual identity only -- reuses the existing _COLORS/TEAM_RGB mechanism.
+    # No combat parameter is read or written here.
+    global TEAM_COLOR, TEAM_RGB, current_color
 
     if running:
         return
 
-    difficulty_index = _CLASS_INDEX.get(name.upper(), 1)
-    CLASS = name
+    TEAM_COLOR = name
+    TEAM_RGB = _COLORS.get(name.upper(), RGB_WHITE)
+    current_color = name
 
 
 # ---------------------------------------------------------------------------
@@ -377,8 +379,8 @@ STATE_STOPPED = "STOPPED"
 # On-robot menu screens (only shown/used while stopped).
 UI_MAIN = "MAIN"
 UI_SETTINGS = "SETTINGS"
-UI_DIFFICULTY = "DIFFICULTY"
-UI_STRATEGY = "STRATEGY"
+UI_PERSONA = "PERSONA"
+UI_COLOR = "COLOR"
 
 
 # ---------------------------------------------------------------------------
@@ -388,9 +390,12 @@ UI_STRATEGY = "STRATEGY"
 running = False
 state = STATE_READY
 
-# On-robot menu state (student-facing Difficulty/Strategy picker).
+# On-robot menu state (student-facing Persona/Color picker).
 ui_screen = UI_MAIN
-strategy_choice = _infer_strategy_choice()
+current_persona = "LION"
+current_color = "BLUE"
+apply_persona(current_persona)
+apply_color(current_color)
 
 last_seen_dir = 1       # -1 = left, 1 = right
 search_dir = 1
@@ -739,9 +744,14 @@ def update_display(force=False):
     name, search_speed, track_speed, attack_speed = get_difficulty()
 
     display.fill(0)
-    display.text(TEAM_NAME[:10], 0, 0)
-    display.text(BOT_ID, 72, 0)
-    display.text(name[:4], 96, 0)
+
+    if not running and ui_screen == UI_MAIN:
+        # MAIN screen leads with the student's actual choices.
+        display.text("{} {}".format(current_persona, current_color), 0, 0)
+    else:
+        display.text(TEAM_NAME[:10], 0, 0)
+        display.text(BOT_ID, 72, 0)
+        display.text(name[:4], 96, 0)
 
     if running:
         pct = intensity_pct()
@@ -782,21 +792,21 @@ def update_display(force=False):
             )
             display.text("L:" + line_text[:15], 0, 46)
     elif ui_screen == UI_SETTINGS:
-        display.text("A diff:{}".format(name[:4]), 0, 16)
-        display.text("B strat:{}".format(strategy_choice[:4]), 0, 32)
-        display.text("C back", 0, 48)
-    elif ui_screen == UI_DIFFICULTY:
-        display.text("A rookie", 0, 16)
-        display.text("B student", 0, 32)
-        display.text("C professor", 0, 48)
-    elif ui_screen == UI_STRATEGY:
-        display.text("A aggressive", 0, 16)
-        display.text("B balanced", 0, 32)
-        display.text("C defensive", 0, 48)
+        display.text("A Persona", 0, 16)
+        display.text("B Color", 0, 32)
+        display.text("C Back", 0, 48)
+    elif ui_screen == UI_PERSONA:
+        display.text("A Bear", 0, 16)
+        display.text("B Lion", 0, 32)
+        display.text("C Wolf", 0, 48)
+    elif ui_screen == UI_COLOR:
+        display.text("A Blue", 0, 16)
+        display.text("B Red", 0, 32)
+        display.text("C Green", 0, 48)
     else:
-        display.text("A start", 0, 16)
-        display.text("B settings", 0, 32)
-        display.text("C recalib", 0, 48)
+        display.text("A Start", 0, 16)
+        display.text("B Settings", 0, 32)
+        display.text("C Recalib", 0, 48)
 
     display.show()
 
@@ -1637,12 +1647,12 @@ def handle_button_a_menu():
     if ui_screen == UI_MAIN:
         toggle_running()
     elif ui_screen == UI_SETTINGS:
-        enter_screen(UI_DIFFICULTY)
-    elif ui_screen == UI_DIFFICULTY:
-        apply_difficulty_choice("ROOKIE")
+        enter_screen(UI_PERSONA)
+    elif ui_screen == UI_PERSONA:
+        apply_persona("BEAR")
         enter_screen(UI_SETTINGS)
-    elif ui_screen == UI_STRATEGY:
-        apply_strategy_preset("AGGRESSIVE")
+    elif ui_screen == UI_COLOR:
+        apply_color("BLUE")
         enter_screen(UI_SETTINGS)
 
 
@@ -1650,12 +1660,12 @@ def handle_button_b_menu():
     if ui_screen == UI_MAIN:
         enter_screen(UI_SETTINGS)
     elif ui_screen == UI_SETTINGS:
-        enter_screen(UI_STRATEGY)
-    elif ui_screen == UI_DIFFICULTY:
-        apply_difficulty_choice("STUDENT")
+        enter_screen(UI_COLOR)
+    elif ui_screen == UI_PERSONA:
+        apply_persona("LION")
         enter_screen(UI_SETTINGS)
-    elif ui_screen == UI_STRATEGY:
-        apply_strategy_preset("BALANCED")
+    elif ui_screen == UI_COLOR:
+        apply_color("RED")
         enter_screen(UI_SETTINGS)
 
 
@@ -1665,11 +1675,11 @@ def handle_button_c_menu():
         clear_button_events(500)
     elif ui_screen == UI_SETTINGS:
         enter_screen(UI_MAIN)
-    elif ui_screen == UI_DIFFICULTY:
-        apply_difficulty_choice("PROFESSOR")
+    elif ui_screen == UI_PERSONA:
+        apply_persona("WOLF")
         enter_screen(UI_SETTINGS)
-    elif ui_screen == UI_STRATEGY:
-        apply_strategy_preset("DEFENSIVE")
+    elif ui_screen == UI_COLOR:
+        apply_color("GREEN")
         enter_screen(UI_SETTINGS)
 
 
