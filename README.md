@@ -3,8 +3,10 @@
 Everything a laptop needs to program a **Pololu Zumo 2040** robot for the OUPI
 robot-sumo demo.
 
-This kit is the public GitHub repo at https://github.com/jhassell/oupi-zumo-sumo.
-Clone it (or download the ZIP) onto any laptop to set that machine up.
+This kit is the public GitHub repo at https://github.com/behrouzeftari/oupi-zumo-sumo
+(the current V1 Persona/Color version, by Behrouz Eftari). It is a fork of the
+original project by John Hassell / OU: https://github.com/jhassell/oupi-zumo-sumo.
+Clone the V1 repo (or download the ZIP) onto any laptop to set that machine up.
 
 ---
 
@@ -119,7 +121,7 @@ may need reformatting/reflashing.
 ## Using one or more laptops
 
 The kit is the GitHub repo, so each laptop just clones its own copy with
-`git clone https://github.com/jhassell/oupi-zumo-sumo`. The repo is the source of
+`git clone https://github.com/behrouzeftari/oupi-zumo-sumo`. The repo is the source of
 truth: pull the latest before an event with `git pull`, and commit and push any
 baseline changes you want other machines to pick up. Flashing a robot is always a
 local action over USB, so neither Git nor Dropbox pushes code to a robot (see
@@ -131,6 +133,9 @@ Programming a robot).
 ## Behrouz's Contribution
 
 This repository is a fork of the original OUPI Robot Sumo project by John Hassell / OU.
+
+- Original project: John Hassell / OU — https://github.com/jhassell/oupi-zumo-sumo
+- Current V1 implementation (this fork): Behrouz Eftari — https://github.com/behrouzeftari/oupi-zumo-sumo
 
 The idea for introducing student-selectable robot Personas and Colors was proposed by John Hassell. My contribution was to develop and implement the student-facing interface, tune the Persona behaviors, update the baseline implementation, and test the system on the physical robots.
 

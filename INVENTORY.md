@@ -26,10 +26,10 @@ Not on the list above, but the activity depends on these:
 | Item | Why it matters | Have it |
 | --- | --- | :---: |
 | Sumo arena / board | The bare-wood ring with the drop-off edge. It is the match surface itself, so nothing runs without it. This is the big one to confirm. | ☐ |
-| Printed QUICK_START and the repo address | Print QUICK_START.pdf and note github.com/jhassell/oupi-zumo-sumo, so anyone can set up from scratch. | ☐ |
+| Printed QUICK_START and the repo address | Print QUICK_START.pdf and note github.com/behrouzeftari/oupi-zumo-sumo, so anyone can set up from scratch. | ☐ |
 | Scissors | For cutting the color strip and gaffer tape. | ☐ |
 | Power strip and outlet access | The chargers and the laptops all need power at the venue. | ☐ |
 
 ---
 
-Kit: <https://github.com/jhassell/oupi-zumo-sumo> &middot; Setup details: QUICK_START and ACTIVITY_RUNBOOK
+Kit: <https://github.com/behrouzeftari/oupi-zumo-sumo> &middot; Setup details: QUICK_START and ACTIVITY_RUNBOOK

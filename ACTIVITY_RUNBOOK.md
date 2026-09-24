@@ -51,8 +51,11 @@ students they can reset the robot to the approved baseline with the word
 The kit is the public GitHub repo, so each laptop just clones its own copy:
 
 ```bash
-git clone https://github.com/jhassell/oupi-zumo-sumo
+git clone https://github.com/behrouzeftari/oupi-zumo-sumo
 ```
+
+(This is the current V1 Persona/Color version. It is a fork of the original
+project by John Hassell / OU: https://github.com/jhassell/oupi-zumo-sumo.)
 
 - The clone creates an `oupi-zumo-sumo/` folder; that folder **is** the kit (the
   repo root, not a `Teaching/zumo_kit` subfolder).
