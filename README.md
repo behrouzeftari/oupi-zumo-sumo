@@ -162,3 +162,17 @@ MAIN
 │       ├── Red
 │       └── Green
 └── C = Recalibrate
+```
+
+### Hardware Testing
+
+The updated software was flashed and tested on three physical Pololu Zumo 2040 robots.
+
+### Development Environment
+
+- Windows 11
+- WSL2 Ubuntu
+- Python / MicroPython
+- Git
+- Claude Code
+- Pololu Zumo 2040
