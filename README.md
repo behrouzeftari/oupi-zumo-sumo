@@ -121,3 +121,44 @@ truth: pull the latest before an event with `git pull`, and commit and push any
 baseline changes you want other machines to pick up. Flashing a robot is always a
 local action over USB, so neither Git nor Dropbox pushes code to a robot (see
 Programming a robot).
+
+
+---
+
+## Behrouz's Contribution
+
+This repository is a fork of the original OUPI Robot Sumo project by John Hassell / OU.
+
+The idea for introducing student-selectable robot Personas and Colors was proposed by John Hassell. My contribution was to develop and implement the student-facing interface, tune the Persona behaviors, update the baseline implementation, and test the system on the physical robots.
+
+### Student Persona System
+
+Students can choose a robot Persona to give their robot a different behavioral style:
+
+| Persona | Behavior |
+|---|---|
+| **Bear** | Slow and deliberate; becomes strong and committed when an opponent is detected. |
+| **Lion** | Active and mobile; searches, moves, and attacks. |
+| **Wolf** | Target-oriented; focuses more strongly on steering toward and pursuing an opponent. |
+
+Students can also select a team color:
+
+- Blue
+- Red
+- Green
+
+### Robot Menu
+
+```text
+MAIN
+├── A = Start
+├── B = Settings
+│   ├── A = Persona
+│   │   ├── Bear
+│   │   ├── Lion
+│   │   └── Wolf
+│   └── B = Color
+│       ├── Blue
+│       ├── Red
+│       └── Green
+└── C = Recalibrate
