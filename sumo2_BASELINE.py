@@ -69,48 +69,31 @@ BOT_ID = _BOT_IDS.get(_SERIAL, _SERIAL[-4:])
 
 
 # ===========================================================================
-# BUILD SELECTION PROTOCOL  (instructions for Claude Code -- both laptops)
+# STUDENT WORKFLOW  (V1 -- robot buttons only)
 # ===========================================================================
 #
-# This block is the source of truth for the per-match build-selection flow. It
-# lives in the baseline on purpose so it survives every "restart" and syncs via
-# Dropbox to the other laptop. When a faculty member says "restart", Claude must:
-#
-#   1. Reset custom/sumo2.py <- sumo2_BASELINE.py, flash with --eject (clean
-#      baseline for a fresh match).
-#   2. GREET the new student, then present each category as a NUMBERED menu in
-#      the chat (options 1/2/3) so the student can build by simply typing the
-#      numbers. They reply with one number per category, e.g. "3 1 1 1 2"; an
-#      unanswered category falls back to option 2 (the middle):
-#        Class      : 1 ROOKIE   2 STUDENT  3 PROFESSOR        (top speed)
-#        Aggression : 1 CAUTIOUS 2 BALANCED 3 RECKLESS         (how hard it commits)
-#        Agility    : 1 SLUGGISH 2 NIMBLE   3 TWITCHY          (turn sharpness)
-#        Edge Nerve : 1 CAREFUL  2 NORMAL   3 DAREDEVIL        (risk near the edge)
-#        Signature  : 1 CHARGER  2 FLANKER  3 COUNTER-PUNCHER  (stalemate-breaker)
-#      Signature moves (see handle_combat_maneuver for the implementation):
-#        CHARGER         -- short reverse run-up, then a long full-power head-on ram.
-#        FLANKER         -- reverse, big pivot, angled burst into the opponent's side.
-#        COUNTER-PUNCHER -- give ground, then a pivot-shove into the lunging side.
-#   3. APPLY the five choices to the TEAM BOT CONFIG values below (and set
-#      TEAM_NAME/TEAM_COLOR if the student offers them). Edit custom/sumo2.py
-#      only -- never the baseline -- unless told "update the baseline".
-#   4. Ask the student for ONE short free-text "personal tweak" and implement it
-#      as best the code allows (e.g. start-of-match aggression, a victory spin,
-#      LED color/pattern, sound). If a tweak is not physically possible, say so.
-#   5. Compile (py_compile) and flash custom/sumo2.py with --eject. Ready to fight.
-#   6. The NEXT "restart" wipes all of the above back to this baseline.
+# Students do not use a laptop, Claude Code, or edit this file. They set up the
+# robot with its own buttons and OLED menu (see Buttons at the top of the file):
+#   Persona: Bear / Lion / Wolf  -> fighting behavior (see PERSONA_PRESETS)
+#   Color:   Blue / Red / Green  -> LED/display identity only
+# At power-up the defaults are LION and BLUE. A choice stays in effect until
+# the robot is reset, power-cycled, or reflashed.
 #
 # ---------------------------------------------------------------------------
-# TEAM BOT CONFIG  (set these from the team's paper design sheet)
+# TEAM BOT CONFIG  (developer/faculty defaults -- not student-facing)
 # ---------------------------------------------------------------------------
 #
-# Faculty: copy the five choices off the team's design sheet into the values
-# below, then flash this file to that team's robot. Spelling and case do not
-# have to be exact -- an unknown value just falls back to the middle option,
-# so a typo can never crash a match.
+# These values are read once at startup. In V1 the selected Persona replaces
+# the speed, attack, and steering values that CLASS, AGGRESSION, and AGILITY
+# produce, and the selected Color replaces TEAM_COLOR. EDGE_NERVE still sets
+# edge detection, the same for every Persona. SIGNATURE only biases the combat
+# maneuvers, which are currently unused. TEAM_NAME is shown on the display.
+# Spelling and case do not have to be exact -- an unknown value falls back to
+# the middle option, so a typo can never crash a match.
 #
-# To run the locked House Champion instead, set HOUSE_BOT = True; the team
-# values below are then ignored.
+# To run the locked House Champion instead, set HOUSE_BOT = True; the values
+# below are then replaced by the House Champion set (Persona and Color are
+# still applied on top).
 
 HOUSE_BOT = False
 
@@ -176,7 +159,7 @@ PASSIVE_DETECT = True
 PASSIVE_SAMPLES = const(24)     # sensor reads per passive scan (~3 ms)
 PASSIVE_SEEN = const(4)         # total lows that count as "opponent out there"
 PASSIVE_CLEAR = const(9)        # total lows that count as a clear sighting (full power)
-# FRONT_ATTACK_THRESHOLD is set from AGGRESSION in the team-config section.
+# FRONT_ATTACK_THRESHOLD is set by the selected Persona (see PERSONA_PRESETS).
 
 # Lost-opponent timing.
 LOST_OPPONENT_MS = const(1100)
@@ -204,8 +187,8 @@ SEARCH_SPIN_PCT = const(65)               # scan-spin speed as % of search speed
 # Display update rate.
 DISPLAY_UPDATE_MS = const(120)
 
-# STEER_GAIN (steering while attacking) is set from AGILITY in the team-config
-# section.
+# STEER_GAIN (steering while tracking/attacking) is set by the selected Persona
+# (see PERSONA_PRESETS).
 
 # Stalemate detection (time-based + slip-proof; encoder stall is a fast path).
 # Time in ATTACK is the primary trigger because it fires whether the treads
@@ -251,9 +234,10 @@ DIFFICULTIES = [
 # Apply team config -> engine parameters
 # ---------------------------------------------------------------------------
 #
-# Each named choice on the design sheet maps to safe numbers the engine already
-# understands, so a paper sheet fully defines a robot's behaviour. Every option
-# stays inside ranges that have been bench-tested, so no combination crashes.
+# Each named choice maps to safe numbers the engine already understands. Every
+# option stays inside ranges that have been bench-tested, so no combination
+# crashes. The speed, attack, and steering values computed here are only the
+# startup values; apply_persona() replaces them (see PERSONA_PRESETS below).
 
 # Locked House Champion. Editing these changes the champion for everyone, so
 # leave them alone unless that is what you intend.

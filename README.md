@@ -46,12 +46,13 @@ should calibrate fresh for its own arena (see Calibration below).
 - **Engage:** the moment a robot **clearly** sees an opponent it jumps to **full
   power** (overriding the slow-start ramp); it drives toward the opponent and,
   once pushing, **does not disengage** on its own.
-- Buttons: **A** start/stop · **B** difficulty (when stopped) · **C** recalibrate
-  (when stopped).
+- Buttons: **A** start/stop · **B** Settings (Persona / Color, when stopped) ·
+  **C** recalibrate (when stopped). See *Behrouz's Contribution* below for the
+  full menu.
 
 Handy tunables near the top of `sumo2.py`: `PASSIVE_DETECT`, `PASSIVE_SEEN`,
-`CLEAR_SIGHT_COUNT`, `SEARCH_SPIN_PCT`, `LOST_OPPONENT_MS`, and the team-config
-block (`TEAM_NAME`, `CLASS`, `AGGRESSION`, `AGILITY`, `EDGE_NERVE`, `SIGNATURE`).
+`CLEAR_SIGHT_COUNT`, `SEARCH_SPIN_PCT`, `LOST_OPPONENT_MS`, `PERSONA_PRESETS`
+(Bear/Lion/Wolf behavior), and the team-config block (`TEAM_NAME`, `EDGE_NERVE`).
 
 ---
 
@@ -157,10 +158,11 @@ MAIN
 │   │   ├── Bear
 │   │   ├── Lion
 │   │   └── Wolf
-│   └── B = Color
-│       ├── Blue
-│       ├── Red
-│       └── Green
+│   ├── B = Color
+│   │   ├── Blue
+│   │   ├── Red
+│   │   └── Green
+│   └── C = Back
 └── C = Recalibrate
 ```
 

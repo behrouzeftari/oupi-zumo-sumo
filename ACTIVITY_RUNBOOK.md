@@ -7,15 +7,16 @@ again weeks later. Written 2026-06-27.
 
 ## 1. What the activity is
 
-Students design a sumo-fighting robot by choosing five behavior options and one
-free-text "personal tweak." A facilitator runs **Claude Code**, which edits the
-robot's program from those choices, flashes it to a **Pololu Zumo 2040** robot,
-and the robot fights another robot in a ring. Each student gets a fresh build;
-between students the program is reset to a clean baseline with the word
-**"restart"**.
+Students give a **Pololu Zumo 2040** sumo robot a personality and a team color,
+then the robot fights another robot in a ring. Students do everything with the
+robot's own buttons and OLED menu: they pick a **Persona** (Bear, Lion, or Wolf)
+and a **Color** (Blue, Red, or Green). Students do not use a laptop or Claude
+Code, and they do not change any code (see §7).
 
-The robot program is `sumo2.py` (MicroPython). The faculty member never edits raw
-code by hand — they talk to Claude Code, which applies the changes.
+The robot program is `sumo2.py` (MicroPython). Facilitators and developers
+maintain and flash it from a laptop with Git and **Claude Code**; between
+students they can reset the robot to the approved baseline with the word
+**"restart"**.
 
 ---
 
@@ -71,7 +72,7 @@ oupi-zumo-sumo/
 ├── ACTIVITY_RUNBOOK.md     # THIS file
 ├── sumo2_BASELINE.py       # the canonical DEFAULT program (never edited by students)
 ├── sumo2_BASELINE_<ts>.py  # timestamped archive snapshots of the baseline
-├── custom/                 # the WORKING program students modify + flash
+├── custom/                 # the WORKING copy that gets flashed (same as baseline in V1)
 │   ├── sumo2.py            #   (this is what gets flashed; reset to baseline on "restart")
 │   ├── main.py             #   auto-runs sumo2.py on power-up
 │   └── main_menu.py        #   Pololu splash loader (press C during splash to pick a program)
@@ -85,8 +86,8 @@ oupi-zumo-sumo/
 
 - **Source of truth:** `sumo2_BASELINE.py` is the immutable default. It is only
   changed when the facilitator explicitly says "update the baseline."
-- **Working file:** `custom/sumo2.py` is what students' builds are written into
-  and what gets flashed.
+- **Working file:** `custom/sumo2.py` is what gets flashed. In V1 it is identical
+  to the baseline. Students never edit it.
 
 ## 6. What `sumo2.py` does (baseline behavior)
 
@@ -100,38 +101,48 @@ oupi-zumo-sumo/
   it drives toward the opponent and, once pushing, stays committed.
 - **Edge safety:** reaching the board edge triggers an ESCAPE (back up, turn in,
   drive in). There is **no IMU tilt detection** (it was tried and removed).
-- **Buttons:** A start/stop · B difficulty (stopped) · C recalibrate (stopped).
-- **Build options** map to the `TEAM BOT CONFIG` block:
-  `CLASS` (ROOKIE/STUDENT/PROFESSOR), `AGGRESSION` (CAUTIOUS/BALANCED/RECKLESS),
-  `AGILITY` (SLUGGISH/NIMBLE/TWITCHY), `EDGE_NERVE` (CAREFUL/NORMAL/DAREDEVIL),
-  `SIGNATURE` (CHARGER/FLANKER/COUNTER-PUNCHER), plus `TEAM_NAME`/`TEAM_COLOR`.
+- **Buttons:** A start/stop · B Settings (Persona / Color, when stopped) ·
+  C recalibrate (when stopped). The full menu is in §7.
+- **Persona** (Bear / Lion / Wolf) sets the fighting behavior from
+  `PERSONA_PRESETS`. **Color** (Blue / Red / Green) changes only the LEDs and
+  display. Edge detection and escape are the same for every Persona.
+- The `TEAM BOT CONFIG` block holds developer/faculty defaults (`TEAM_NAME`,
+  `EDGE_NERVE`, `HOUSE_BOT`); it is not student-facing.
 
-## 7. Mode of operation — the per-student loop
+## 7. Mode of operation — the student workflow (V1)
 
-1. **Facilitator says "restart"** (alias: "reset", confirmed once). Claude:
-   - copies `sumo2_BASELINE.py` → `custom/sumo2.py` (wipes the previous build),
-   - flashes the clean baseline to the connected robot,
-   - presents the **numbered build menu** in chat.
-   - (Variant: **"restart and not build"** = reset + flash baseline, skip the menu.)
-2. **Student builds by typing 5 numbers**, e.g. `3 2 1 2 3`, one per category:
-   ```
-   Class      : 1 ROOKIE   2 STUDENT  3 PROFESSOR
-   Aggression : 1 CAUTIOUS 2 BALANCED 3 RECKLESS
-   Agility    : 1 SLUGGISH 2 NIMBLE   3 TWITCHY
-   Edge Nerve : 1 CAREFUL  2 NORMAL   3 DAREDEVIL
-   Signature  : 1 CHARGER  2 FLANKER  3 COUNTER-PUNCHER
-   ```
-   A blank category falls back to option **2** (middle). Optionally a **name +
-   color** and one **personal tweak** (free text).
-3. **Claude applies** the choices to `custom/sumo2.py`, implements the tweak,
-   `py_compile`s it, and **flashes with `--eject`**.
-4. **Facilitator presses the robot's reset button** (the drive was cleanly
-   ejected, so no need to unplug), optionally recalibrates (C → WOOD →
-   BOARD-EDGE), and presses **A** to fight.
-5. Next student → **"restart"** again.
+Students use only the robot's buttons and OLED menu. They do not use a laptop
+or Claude Code, and they do not change any code.
 
-The full protocol is also encoded as a comment block (`BUILD SELECTION PROTOCOL`)
-at the top of `sumo2_BASELINE.py`, and the workflow rules are in `CLAUDE.md`.
+1. **Power on the robot.** After the splash screen it loads the saved edge
+   calibration (or asks for one on a new arena — see step 2).
+2. **Main menu:**
+   - **A** = Start (3-2-1 countdown, then the match begins)
+   - **B** = Settings
+   - **C** = Recalibrate (WOOD sample, then BOARD-EDGE sample)
+3. **Settings:**
+   - **A** = Persona
+   - **B** = Color
+   - **C** = Back (to the Main menu)
+4. **Persona:**
+   - **A** = Bear — slow and deliberate while searching; hits hard once engaged
+   - **B** = Lion — active and mobile; searches and attacks promptly
+   - **C** = Wolf — strong tracking and steering; commits quickly
+5. **Color:**
+   - **A** = Blue
+   - **B** = Red
+   - **C** = Green
+6. After a Persona or Color pick, the robot returns to Settings. Press **C**
+   (Back) to return to the Main menu, then **A** to start the match. Pressing
+   **A** during a match stops the robot.
+7. Persona and Color are student-facing settings only. They can be changed only
+   while the robot is stopped, and they reset to **Lion / Blue** when the robot is
+   reset, power-cycled, or reflashed.
+
+**Facilitator, between students (optional):** say **"restart"** in Claude Code
+to copy `sumo2_BASELINE.py` → `custom/sumo2.py` and flash it with `--eject`
+(see `CLAUDE.md`), or simply press the robot's reset button to return to the
+defaults. Always eject the drive before resetting (see §9).
 
 ## 8. Key commands (run from inside the cloned `oupi-zumo-sumo/` folder)
 
@@ -177,9 +188,13 @@ USB serial, never by the mount name or drive letter**).
   edits through Git (commit and push, then `git pull` on the others). The robot
   only updates when flashed; neither Git nor Dropbox pushes code to the robot.
 
-## 10. Example builds from the first run (for reference)
+## 10. Example builds from the first run (historical reference)
 
-These illustrate the kinds of personal tweaks that were implemented as real code:
+These are from the first run, which used the earlier laptop-based build workflow
+(five build options plus a free-text "personal tweak" applied by Claude Code).
+That workflow is **not** used in V1 — students now pick a Persona and Color on
+the robot (§7). They illustrate the kinds of personal tweaks that were
+implemented as real code at the time:
 
 - **Alfie** (green): PROFESSOR/CAUTIOUS/SLUGGISH/CAREFUL/FLANKER; tweak "slow &
   careful" → lowered `MAX_MOTOR_SPEED`.
@@ -206,11 +221,13 @@ These were all written into `custom/sumo2.py` per-build and wiped on the next
 4. `python3 scripts/identify_bots.py` to see which bot is which.
 5. (First match on a new arena) calibrate each robot: reset → **C** → WOOD sample
    → BOARD-EDGE sample.
-6. Say **"restart"** and run the per-student loop (§7).
+6. Say **"restart"** to flash the approved baseline, then run the student
+   workflow (§7).
 7. If anything looks corrupt/stuck, see §9.
 
 ## 12. Tunables (top of `sumo2.py`)
 
 `PASSIVE_DETECT`, `PASSIVE_SEEN`, `PASSIVE_CLEAR`, `CLEAR_SIGHT_COUNT`,
 `SEARCH_SPIN_PCT`, `SEARCH_SCAN_MS`, `SEARCH_ADVANCE_MS`, `LOST_OPPONENT_MS`,
-`MAX_MOTOR_SPEED`, the `STALEMATE_*` values, and the `TEAM BOT CONFIG` block.
+`MAX_MOTOR_SPEED`, the `STALEMATE_*` values, `PERSONA_PRESETS` (Bear/Lion/Wolf
+behavior), and the `TEAM BOT CONFIG` block.
