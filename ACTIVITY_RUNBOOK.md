@@ -34,7 +34,7 @@ students they can reset the robot to the approved baseline with the word
 
   This map lives in `_BOT_IDS` inside `sumo2.py` and in `scripts/identify_bots.py`.
 - **Bot A's flash is flaky** — it intermittently throws I/O errors and goes
-  read-only. Recovery is documented in §8.
+  read-only. Recovery is documented in §9.
 - When plugged into a laptop each robot appears as:
   - a **USB mass-storage drive** labeled `MicroPython` (this is how we flash code), and
   - a **serial REPL** at `/dev/ttyACM*` (needs sudo; not used in the normal flow).
@@ -76,7 +76,8 @@ oupi-zumo-sumo/
 │   ├── sumo2.py            #   (this is what gets flashed; reset to baseline on "restart")
 │   ├── main.py             #   auto-runs sumo2.py on power-up
 │   └── main_menu.py        #   Pololu splash loader (press C during splash to pick a program)
-├── bot_image/              # full snapshot of a working robot's filesystem
+├── bot_image/              # full snapshot of a working robot's filesystem (recovery image;
+│                           #   its sumo2.py is older, so flash custom/sumo2.py after using it)
 │   ├── zumo_2040_robot/    #   the Pololu MicroPython library (ships on the robot)
 │   ├── sumo2.py, main.py, main_menu.py, and the stock example programs
 └── scripts/

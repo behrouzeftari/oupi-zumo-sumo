@@ -9,7 +9,7 @@ Box checked by: ______________________    Date: ____________________
 | Item | Qty | Notes | Packed |
 | --- | :---: | --- | :---: |
 | Zumo 2040 robots | 3 | Two compete, one spare. Each shows its A/B/C letter on its display. | ☐ |
-| Linux laptops with Claude Code | 2 | Run the build-and-flash workflow over USB. Two so both pit stations can build at once. | ☐ |
+| Linux laptops with Claude Code | 2 | Flash and reset the robots over USB (facilitators only; students use the robot’s buttons). Two so both pit stations can flash at once. | ☐ |
 | Laptop chargers | 2 | Power adapters for the two laptops. | ☐ |
 | USB-C cables | 2 | Connect a robot to a laptop for flashing (one per station). | ☐ |
 | Rechargeable AA batteries | 16 | Four per robot (twelve in use) plus one spare set of four. | ☐ |

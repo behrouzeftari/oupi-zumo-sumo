@@ -1,8 +1,9 @@
 # Zumo Sumo Kit — working instructions for Claude Code
 
-This folder is the shared OUPI **Pololu Zumo 2040** robot-sumo kit, synced between
-two laptops via **Dropbox**. Read `README.md` for full background. Follow these
-rules so changes reach both the robot and the other laptop.
+This folder is the OUPI **Pololu Zumo 2040** robot-sumo kit. The **GitHub
+repository is the source of truth**; each laptop works in its own Git clone.
+Read `README.md` for full background. Follow these rules so changes reach both
+the robot and the other laptop.
 
 ## Student workflow vs. development workflow
 - **Students** do not use Claude Code, a laptop, or the source code. They set up
@@ -42,7 +43,7 @@ baseline and flash it, so the next student starts from the default robot:
 the arena calibration, unless the user says otherwise.)
 
 ## After EVERY robot-code change — flash it, or the robot won't update
-The robot does NOT update from Dropbox automatically. It only changes when its
+The robot does NOT update from Git (or Dropbox) automatically. It only changes when its
 program is written to its mounted USB drive and the drive is ejected. So whenever
 you edit the robot program:
 1. Validate it: `python3 -m py_compile custom/sumo2.py`
@@ -63,7 +64,17 @@ you edit the robot program:
   BOARD-EDGE sample. Then **A** starts a match.
 
 ## Sharing between the two laptops
-- Files you save in this folder sync via Dropbox to the other laptop automatically.
-- If you ever see a Dropbox **"conflicted copy"** file, both laptops edited at the
-  same time — reconcile the two versions before flashing a robot.
-- Avoid editing `sumo2_BASELINE.py` on both laptops at once.
+- GitHub is the source of truth. Each laptop has its own clone: `git pull` before
+  an event or before editing, and commit and push approved changes so the other
+  laptop can pull them.
+- Avoid editing `sumo2_BASELINE.py` on both laptops at once. If Git reports a
+  conflict, reconcile the two versions before flashing a robot.
+- Older copies of the kit may still exist in Dropbox. They are not the source of
+  truth; use the Git clone.
+
+## Old Claude memory backups
+- The `claude_memories_*` folders are point-in-time backups (2026-06-29) of each
+  laptop's Claude memory from before V1. Their "restart" / BUILD SELECTION
+  PROTOCOL / "students modify the code" notes are obsolete. They are kept as
+  history. This file takes precedence over them, and over any matching memory
+  still stored on a laptop.

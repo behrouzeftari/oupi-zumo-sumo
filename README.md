@@ -13,7 +13,7 @@ Clone it (or download the ZIP) onto any laptop to set that machine up.
 | Path | What it is |
 |---|---|
 | `sumo2_BASELINE.py` | **The official baseline** students always start from. |
-| `bot_image/` | A complete snapshot of a working robot's filesystem (the `zumo_2040_robot` library + every program + `main.py`). Use to set up a fresh/blank robot. |
+| `bot_image/` | A complete snapshot of a working robot's filesystem (the `zumo_2040_robot` library + every program + `main.py`). Use to set up or recover a fresh/blank robot. Its `sumo2.py` is an older snapshot (no Persona/Color menu), so flash the current program afterwards (see Full setup). |
 | `custom/` | Just the OUPI-specific files: `sumo2.py` (= baseline), `main.py`, `main_menu.py`. Use to update a robot that already has the Pololu library. |
 | `scripts/flash_robot.py` | Copy `sumo2.py` onto mounted Zumo drive(s) with fsync + checksum verify. |
 | `scripts/identify_bots.py` | List connected robots and their A/B/C letter (by USB serial). |
@@ -69,7 +69,9 @@ REPL on `/dev/ttyACM*`). We program via the **mass-storage drive**.
 
 ### Full setup (fresh/blank robot)
 1. Copy the entire contents of `bot_image/` onto the robot's MicroPython drive.
-2. Eject, reset.
+2. Install the current V1 program over the older snapshot copy:
+   `python3 scripts/flash_robot.py custom/sumo2.py --eject`
+3. Reset the robot (the drive was already ejected).
 
 ### ⚠️ CRITICAL — don't corrupt the flash
 **Always eject the drive (file-manager eject button) before unplugging or

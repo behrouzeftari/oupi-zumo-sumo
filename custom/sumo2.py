@@ -220,7 +220,7 @@ RGB_WHITE = (255, 255, 255)
 
 
 # ---------------------------------------------------------------------------
-# Difficulty levels
+# Speed tiers (each Persona picks one with its speed_tier; internal names only)
 # ---------------------------------------------------------------------------
 
 # name, search_speed, track_speed, attack_speed
@@ -735,7 +735,7 @@ def update_display(force=False):
     else:
         display.text(TEAM_NAME[:10], 0, 0)
         display.text(BOT_ID, 72, 0)
-        display.text(name[:4], 96, 0)
+        display.text(current_persona[:4], 96, 0)
 
     if running:
         pct = intensity_pct()
